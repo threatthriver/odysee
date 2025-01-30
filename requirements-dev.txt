@@ -1,0 +1,31 @@
+# Testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-benchmark>=3.4.1
+
+# Documentation
+sphinx>=7.0.0
+sphinx-rtd-theme>=1.0.0
+furo>=2022.4.7
+myst-parser>=0.18.0
+sphinx-autodoc-typehints>=1.18.3
+
+# Code Quality
+black>=23.0.0
+isort>=5.0.0
+flake8>=6.0.0
+mypy>=1.0.0
+
+# Development
+ipython>=8.3.0
+jupyter>=1.0.0
+pre-commit>=3.0.0
+maturin>=1.0.0
+tqdm>=4.65.0
+matplotlib>=3.7.0
+numpy>=1.24.0
+ipykernel>=6.0.0  # For notebook development
+
+# Build
+build>=0.8.0
+twine>=4.0.1

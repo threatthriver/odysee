@@ -4,14 +4,21 @@ build-backend = "maturin"
 
 [project]
 name = "odysee"
-version = "0.1.0"
-description = "High-performance multi-modal routing with quantum-inspired algorithms"
+version = "0.2.0"
+description = "High-performance quantum-inspired multimodal memory system with adaptive routing"
 readme = "README.md"
 requires-python = ">=3.8"
 license = { file = "LICENSE" }
-keywords = ["deep-learning", "quantum", "routing", "multi-modal"]
+keywords = [
+    "deep-learning",
+    "quantum-computing",
+    "multimodal",
+    "memory-systems",
+    "neural-processing",
+    "distributed-systems"
+]
 authors = [
-    { name = "Your Name", email = "your.email@example.com" }
+    { name = "Aniket Kumar", email = "aniketkumar34@outlook.com" }
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -21,13 +28,71 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Rust",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "numpy>=1.24.0",
+    "torch>=2.0.0",
+    "transformers>=4.30.0",
+    "pillow>=10.0.0",
+    "scipy>=1.10.0",
+    "pandas>=2.0.0",
+    "scikit-learn>=1.3.0",
+    "tqdm>=4.65.0",
+    "opencv-python>=4.8.0",
+    "librosa>=0.10.0",
+    "networkx>=3.1"
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0"
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-benchmark>=4.0.0",
+    "hypothesis>=6.75.3"
+]
+gpu = [
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "torchaudio>=2.0.0"
+]
+docs = [
+    "sphinx>=7.0.0",
+    "sphinx-rtd-theme>=1.2.0",
+    "myst-parser>=2.0.0"
 ]
 
 [project.urls]
-repository = "https://github.com/yourusername/odysee"
+repository = "https://github.com/intellijmind/odysee"
+documentation = "https://odysee.readthedocs.io"
+changelog = "https://github.com/intellijmind/odysee/blob/main/CHANGELOG.md"
 
 [tool.maturin]
 python-source = "python"
 features = ["pyo3/extension-module"]
+profile = "release"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --cov=odysee"
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3

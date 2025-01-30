@@ -5,45 +5,120 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  RUSTFLAGS: "-D warnings"
+  RUSTDOCFLAGS: "-D warnings"
 
 jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.8', '3.9', '3.10', '3.11']
+        rust-toolchain: [stable, nightly]
+        include:
+          - os: ubuntu-latest
+            cuda: true
+          - os: windows-latest
+            cuda: true
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 2
     
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+        cache: 'pip'
         
-    - name: Set up Rust
+    - name: Set up Rust ${{ matrix.rust-toolchain }}
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
+        toolchain: ${{ matrix.rust-toolchain }}
+        override: true
+        components: rustfmt, clippy
         
-    - name: Install dependencies
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      
+    - name: Set up CUDA
+      if: matrix.cuda
+      uses: Jimver/cuda-toolkit@v0.2.11
+      with:
+        cuda: '12.0.0'
+        method: 'network'
+        
+    - name: Install system dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libopencv-dev \
+          libopenblas-dev \
+          libfftw3-dev \
+          libasound2-dev \
+          portaudio19-dev
+          
+    - name: Install system dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install \
+          opencv \
+          openblas \
+          fftw \
+          portaudio
+          
+    - name: Install system dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        choco install opencv
+        choco install openblas
+        
+    - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .[full]
+        pip install -e .[dev,gpu,test]
         
-    - name: Run tests
+    - name: Check formatting
       run: |
-        pytest tests/ --cov=odysee --cov-report=xml
+        cargo fmt --all -- --check
+        black . --check
+        isort . --check-only
+        
+    - name: Lint
+      run: |
+        cargo clippy --all-targets --all-features -- -D warnings
+        flake8 .
+        
+    - name: Run Rust tests
+      run: |
+        cargo test --all-features --workspace
+        
+    - name: Run Python tests
+      run: |
+        pytest tests/ --cov=odysee --cov-report=xml -v
         
     - name: Upload coverage
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: true
         
   benchmark:
     needs: test
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
     - uses: actions/checkout@v3
@@ -53,55 +128,43 @@ jobs:
       with:
         python-version: '3.11'
         
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .[full]
-        
-    - name: Run benchmarks
-      run: |
-        python benchmarks/benchmark_experts.py
-        
-    - name: Upload benchmark results
-      uses: actions/upload-artifact@v3
-      with:
-        name: benchmark-results
-        path: benchmarks/results/
-        
-  build-wheels:
-    needs: test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11']
-        
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-        
     - name: Set up Rust
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
+        toolchain: nightly
+        override: true
         
-    - name: Build wheels
-      uses: PyPA/cibuildwheel@v2.16.2
-      env:
-        CIBW_SKIP: "pp* cp36-* cp37-*"
-        
-    - name: Upload wheels
-      uses: actions/upload-artifact@v3
+    - name: Set up CUDA
+      uses: Jimver/cuda-toolkit@v0.2.11
       with:
-        name: wheels
-        path: wheelhouse/*.whl
+        cuda: '12.0.0'
         
-  deploy:
-    needs: [test, benchmark, build-wheels]
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libopencv-dev \
+          libopenblas-dev \
+          libfftw3-dev
+        python -m pip install --upgrade pip
+        pip install -e .[dev,gpu,bench]
+        
+    - name: Run benchmarks
+      run: |
+        cargo bench --all-features
+        python -m pytest benchmarks/ --benchmark-only
+        
+    - name: Store benchmark results
+      uses: benchmark-action/github-action-benchmark@v1
+      with:
+        name: Odysee Benchmarks
+        tool: 'pytest'
+        output-file-path: pytest-benchmark.json
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        auto-push: true
+        
+  docs:
+    needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
@@ -116,19 +179,15 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install build twine
+        pip install -e .[docs]
         
-    - name: Download wheels
-      uses: actions/download-artifact@v3
+    - name: Build documentation
+      run: |
+        cd docs
+        make html
+        
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
       with:
-        name: wheels
-        path: dist/
-        
-    - name: Build source distribution
-      run: python -m build --sdist
-      
-    - name: Upload to PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      run: twine upload dist/*
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/_build/html

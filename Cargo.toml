@@ -1,21 +1,105 @@
 [package]
 name = "odysee"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
+authors = ["Aniket Kumar <aniketkumar34@outlook.com>"]
+description = "High-performance quantum-inspired multimodal memory system"
+repository = "https://github.com/intellijmind/odysee"
+license = "MIT"
+readme = "README.md"
+keywords = ["quantum", "multimodal", "memory", "ai", "distributed"]
+categories = ["science", "algorithms", "memory-management"]
 
 [lib]
 name = "odysee"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.19", features = ["extension-module"] }
-ndarray = { version = "0.15", features = ["rayon"] }
-num-complex = "0.4"
+# Core dependencies
+pyo3 = { version = "0.19", features = ["extension-module", "abi3-py38"] }
+ndarray = { version = "0.15", features = ["rayon", "serde"] }
+num-complex = { version = "0.4", features = ["serde"] }
 rand = "0.8"
 rand_distr = "0.4"
+
+# Async and parallel processing
 rayon = "1.8"
+tokio = { version = "1.32", features = ["full", "rt-multi-thread"] }
+futures = "0.3"
+async-trait = "0.1"
+crossbeam = "0.8"
+
+# Storage and memory management
+dashmap = "5.5"
+rocksdb = { version = "0.21", features = ["multi-threaded-cf"] }
+memmap2 = "0.7"
+parking_lot = "0.12"
+
+# Data formats and serialization
+arrow = { version = "47.0", features = ["prettyprint"] }
+parquet = { version = "47.0", features = ["async"] }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+bincode = "1.3"
+bytes = "1.5"
+
+# Machine learning and tensor operations
+tch = { version = "0.13", features = ["download-libtorch"] }
+half = { version = "2.3", features = ["std", "serde"] }
+intel-mkl-src = { version = "0.8", features = ["mkl-static-lp64-iomp"] }
+accelerate-src = "0.3"
+
+# Image processing
+image = { version = "0.24", features = ["jpeg", "png", "webp"] }
+opencv = { version = "0.84", features = ["clang-runtime"] }
+
+# Audio processing
+symphonia = { version = "0.5", features = ["mp3", "wav", "aac"] }
+cpal = "0.15"
+
+# Monitoring and metrics
+tracing = { version = "0.1", features = ["async-await"] }
+metrics = { version = "0.21", features = ["std"] }
+prometheus = "0.13"
+
+# GPU acceleration
+cuda-runtime-sys = "0.3"
+cuda-driver-sys = "0.3"
+rustacuda = "0.1"
+
+[dev-dependencies]
+criterion = "0.5"
+proptest = "1.2"
+fake = "2.8"
+test-case = "3.1"
+quickcheck = "1.0"
+mockall = "0.11"
+
+[[bench]]
+name = "memory_benchmarks"
+harness = false
+
+[[bench]]
+name = "multimodal_benchmarks"
+harness = false
 
 [profile.release]
 opt-level = 3
-lto = true
+lto = "fat"
 codegen-units = 1
+panic = "abort"
+strip = true
+debug = false
+
+[profile.dev]
+opt-level = 1
+debug = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[package.metadata.vcpkg]
+git = "https://github.com/microsoft/vcpkg"
+rev = "2023.11.20"
+dependencies = ["opencv4", "cuda", "mkl"]

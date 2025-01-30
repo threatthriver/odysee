@@ -57,6 +57,11 @@ if HAS_CUDA:
         'cupy-cuda11x>=12.0.0',
         'torch>=2.0.0+cu118',  # CUDA 11.8 support
     ])
+else:
+    # Non-CUDA torch version
+    install_requires.extend([
+        'torch>=2.0.0',
+    ])
 
 # Package metadata
 setup(

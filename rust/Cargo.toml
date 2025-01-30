@@ -18,7 +18,7 @@ rand_distr = "0.4"
 half = "2.1"  # For FP16 support
 accelerate-src = { version = "0.3", optional = true }  # For Apple Silicon
 intel-mkl-src = { version = "0.8", optional = true }  # For Intel CPUs
-cuda-runtime-sys = { version = "0.3", optional = true }  # For CUDA support
+cuda-runtime-sys = { version = "0.3.0-alpha.1", optional = true }  # For CUDA support
 
 [features]
 default = []

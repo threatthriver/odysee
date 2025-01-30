@@ -19,15 +19,72 @@ We use GitHub to host code, to track issues and feature requests, as well as acc
 5. Make sure your code lints
 6. Issue that pull request!
 
-## Any Contributions You Make Will Be Under the MIT Software License
+## Development Setup
 
-In short, when you submit code changes, your submissions are understood to be under the same [MIT License](LICENSE) that covers the project. Feel free to contact the maintainers if that's a concern.
+1. Install Rust toolchain:
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
 
-## Report Bugs Using GitHub's [Issue Tracker](https://github.com/threatthriver/odysee/issues)
+2. Install Python dependencies:
+```bash
+pip install -r requirements-dev.txt
+```
 
-We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/threatthriver/odysee/issues/new); it's that easy!
+3. Install pre-commit hooks:
+```bash
+pre-commit install
+```
 
-## Write Bug Reports With Detail, Background, and Sample Code
+## Code Style
+
+- Rust code follows the standard Rust style guide
+- Python code follows PEP 8
+- Use type hints in Python code
+- Document all public functions and classes
+
+## Testing
+
+1. Run Rust tests:
+```bash
+cargo test
+```
+
+2. Run Python tests:
+```bash
+pytest tests/
+```
+
+3. Run benchmarks:
+```bash
+python benchmarks/run_benchmarks.py
+```
+
+## Pull Request Process
+
+1. Update the README.md with details of changes to the interface
+2. Update the documentation with any new features
+3. The PR may be merged once you have the sign-off of two other developers
+4. All CI checks must pass
+
+## Quantum Algorithm Contributions
+
+When contributing quantum-inspired algorithms:
+
+1. Provide theoretical analysis of complexity and convergence
+2. Include benchmarks comparing to classical alternatives
+3. Document any assumptions about quantum state preparation
+4. Consider both exact and approximate implementations
+
+## Any contributions you make will be under the MIT Software License
+
+In short, when you submit code changes, your submissions are understood to be under the same [MIT License](http://choosealicense.com/licenses/mit/) that covers the project. Feel free to contact the maintainers if that's a concern.
+
+## Report bugs using GitHub's [issue tracker](https://github.com/threatthriver/odysee/issues)
+
+We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/threatthriver/odysee/issues/new/choose).
+
+## Write bug reports with detail, background, and sample code
 
 **Great Bug Reports** tend to have:
 
@@ -38,13 +95,6 @@ We use GitHub issues to track public bugs. Report a bug by [opening a new issue]
 - What you expected would happen
 - What actually happens
 - Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
-
-## Use a Consistent Coding Style
-
-* Use 4 spaces for indentation
-* Use type hints in Python code
-* Keep lines under 100 characters
-* Write docstrings for functions and classes
 
 ## License
 
