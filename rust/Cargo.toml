@@ -1,0 +1,25 @@
+[package]
+name = "odysee-rust"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "odysee_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.19", features = ["extension-module"] }
+ndarray = { version = "0.15", features = ["rayon"] }
+rayon = "1.7"
+image = "0.24"
+num-traits = "0.2"
+rand = "0.8"
+rand_distr = "0.4"
+
+[build-dependencies]
+pyo3-build-config = "0.19"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
