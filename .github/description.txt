@@ -1,0 +1,1 @@
+🚀 High-performance multi-modal deep learning framework optimized for Apple Silicon. Process 4M+ tokens, handle text and images seamlessly, with Metal acceleration and memory-efficient routing. Built with Rust + Python for speed and ease of use.

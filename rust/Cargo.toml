@@ -8,13 +8,23 @@ name = "odysee_rust"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.19", features = ["extension-module"] }
+pyo3 = { version = "0.19", features = ["extension-module", "abi3-py37"] }
 ndarray = { version = "0.15", features = ["rayon"] }
 rayon = "1.7"
 image = "0.24"
 num-traits = "0.2"
 rand = "0.8"
 rand_distr = "0.4"
+half = "2.1"  # For FP16 support
+accelerate-src = { version = "0.3", optional = true }  # For Apple Silicon
+intel-mkl-src = { version = "0.8", optional = true }  # For Intel CPUs
+cuda-runtime-sys = { version = "0.3", optional = true }  # For CUDA support
+
+[features]
+default = []
+cuda = ["cuda-runtime-sys"]
+apple-silicon = ["accelerate-src"]
+intel = ["intel-mkl-src"]
 
 [build-dependencies]
 pyo3-build-config = "0.19"
@@ -23,3 +33,14 @@ pyo3-build-config = "0.19"
 opt-level = 3
 lto = true
 codegen-units = 1
+panic = "abort"
+
+# Platform specific optimizations
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.9"
+
+[target.'cfg(target_arch = "aarch64")'.dependencies]
+accelerate-src = { version = "0.3", optional = true }
+
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+intel-mkl-src = { version = "0.8", optional = true }
