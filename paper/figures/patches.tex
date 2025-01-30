@@ -1,0 +1,35 @@
+\documentclass{standalone}
+\usepackage{tikz}
+\usetikzlibrary{calc,patterns}
+
+\begin{document}
+\begin{tikzpicture}[
+    box/.style={rectangle,draw,thick,minimum size=4cm},
+    patch/.style={rectangle,draw,thick,pattern=north west lines,pattern color=blue!40,minimum size=1cm}
+]
+
+% Main image
+\node[box] (image) {};
+
+% Grid lines
+\foreach \i in {0,...,3} {
+    \draw[thick] ($(image.north west)+(\i*1cm,0)$) -- ($(image.south west)+(\i*1cm,0)$);
+    \draw[thick] ($(image.north west)+(0,-\i*1cm)$) -- ($(image.north east)+(0,-\i*1cm)$);
+}
+
+% Highlight some patches
+\node[patch] at ($(image.north west)+(0.5cm,-0.5cm)$) {};
+\node[patch] at ($(image.north east)+(-0.5cm,-1.5cm)$) {};
+\node[patch] at ($(image.south west)+(1.5cm,0.5cm)$) {};
+
+% Labels
+\node[above=0.5cm of image] {Image Patches (16x16)};
+\node[right=1cm of image] {
+    \begin{tabular}{l}
+        Patch Features:\\
+        $\mathbf{f}_p = \frac{1}{|P_p|}\sum_{(i,j)\in P_p}\mathbf{x}_{i,j}$
+    \end{tabular}
+};
+
+\end{tikzpicture}
+\end{document}

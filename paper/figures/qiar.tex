@@ -1,0 +1,53 @@
+\documentclass{standalone}
+\usepackage{tikz}
+\usetikzlibrary{quantum}
+\usetikzlibrary{arrows,shapes,positioning,shadows,trees}
+
+\begin{document}
+\begin{tikzpicture}[
+    node distance=2cm,
+    box/.style={rectangle,draw,rounded corners,fill=blue!10,minimum width=2cm,minimum height=1cm},
+    qgate/.style={rectangle,draw,fill=red!10,minimum width=1cm,minimum height=1cm},
+    arrow/.style={->,>=stealth,thick}
+]
+
+% Input state
+\node[box] (input) at (0,0) {Input State};
+
+% Quantum circuit
+\node[qgate] (h1) at (3,1) {$H$};
+\node[qgate] (h2) at (3,0) {$H$};
+\node[qgate] (h3) at (3,-1) {$H$};
+
+\node[qgate] (r1) at (5,1) {$R_\phi$};
+\node[qgate] (r2) at (5,0) {$R_\phi$};
+\node[qgate] (r3) at (5,-1) {$R_\phi$};
+
+\node[qgate] (cnot1) at (7,0.5) {CNOT};
+\node[qgate] (cnot2) at (7,-0.5) {CNOT};
+
+% Output state
+\node[box] (output) at (10,0) {Routing Weights};
+
+% Connections
+\draw[arrow] (input) -- node[above] {Prepare} (h1);
+\draw[arrow] (input) -- (h2);
+\draw[arrow] (input) -- (h3);
+
+\draw[arrow] (h1) -- node[above] {Phase} (r1);
+\draw[arrow] (h2) -- (r2);
+\draw[arrow] (h3) -- (r3);
+
+\draw[arrow] (r1) -- node[above] {Entangle} (cnot1);
+\draw[arrow] (r2) -- (cnot1);
+\draw[arrow] (r2) -- (cnot2);
+\draw[arrow] (r3) -- (cnot2);
+
+\draw[arrow] (cnot1) -- node[above] {Measure} (output);
+\draw[arrow] (cnot2) -- (output);
+
+% Labels
+\node[above=0.5cm of input] {Quantum-Inspired Adaptive Routing};
+
+\end{tikzpicture}
+\end{document}

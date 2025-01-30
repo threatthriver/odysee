@@ -469,60 +469,202 @@ class DensityMatrix:
     def measure(self) -> np.ndarray:
         # Measure in computational basis
         return np.real(np.diag(self.rho))
+
+\section{Hierarchical Quantum Memory Implementation}
+\label{sec:hqm_impl}
+
+\subsection{Quantum State Representation}
+
+The quantum states in HQM are represented using a custom Rust implementation that leverages SIMD operations for efficiency:
+
+\begin{verbatim}
+pub struct QuantumState {
+    real: Array2<f64>,  // Real components
+    imag: Array2<f64>,  // Imaginary components
+}
+
+impl QuantumState {
+    fn conjugate(&self) -> QuantumState {
+        QuantumState {
+            real: self.real.clone(),
+            imag: -&self.imag,
+        }
+    }
+
+    fn norm(&self) -> Array2<f64> {
+        (&self.real * &self.real + 
+         &self.imag * &self.imag).mapv(f64::sqrt)
+    }
+}
 \end{verbatim}
 
-Key features of our implementation:
+\subsection{Quantum Gates}
 
-\begin{itemize}
-    \item Custom quantum state representation
-    \item Optimized quantum gates (Hadamard, Phase, CNOT)
-    \item Efficient entanglement operations
-    \item Density matrix evolution
-    \item Phase tracking and updates
-\end{itemize}
+The quantum operations are implemented as a set of gates:
 
-\subsection{Phase Tracking}
-The phase tracking mechanism uses a moving average estimator:
+\begin{verbatim}
+pub struct QuantumGate {
+    dim: usize,
+}
 
-\begin{equation}
-    \hat{\theta}_i(t) = \alpha\hat{\theta}_i(t-1) + (1-\alpha)\theta_i(t)
-\end{equation}
+impl QuantumGate {
+    fn hadamard(&self, state: &QuantumState) -> QuantumState {
+        let factor = 1.0 / 2.0_f64.sqrt();
+        let new_real = factor * (&state.real + &state.imag);
+        let new_imag = factor * (&state.imag - &state.real);
+        QuantumState { 
+            real: new_real, 
+            imag: new_imag 
+        }
+    }
 
-where $\alpha$ is a momentum parameter.
+    fn phase(&self, state: &QuantumState, phi: f64) 
+        -> QuantumState {
+        let cos_phi = phi.cos();
+        let sin_phi = phi.sin();
+        let new_real = &state.real * cos_phi - 
+                      &state.imag * sin_phi;
+        let new_imag = &state.real * sin_phi + 
+                      &state.imag * cos_phi;
+        QuantumState { 
+            real: new_real, 
+            imag: new_imag 
+        }
+    }
 
-\subsection{Quantum Loss Functions}
+    fn cnot(&self, control: &QuantumState, 
+            target: &QuantumState) 
+        -> (QuantumState, QuantumState) {
+        // Implementation details...
+    }
+}
+\end{verbatim}
 
-\subsubsection{State Fidelity Loss}
-\begin{equation}
-    \mathcal{L}_{\text{quantum}} = 1 - |\langle\psi_{\text{target}}|\psi_{\text{pred}}\rangle|^2
-\end{equation}
+\subsection{Memory Hierarchy}
 
-\subsubsection{Entanglement Loss}
-\begin{equation}
-    \mathcal{L}_{\text{entangle}} = -\text{Tr}(\rho_{AB}\log_2\rho_{AB}) + \text{Tr}(\rho_A\log_2\rho_A)
-\end{equation}
+The memory hierarchy is implemented as a set of levels with different capacities:
 
-where $\rho_A = \text{Tr}_B(\rho_{AB})$ is the reduced density matrix.
+\begin{verbatim}
+struct MemoryLevel {
+    states: Vec<QuantumState>,
+    importance: Vec<f64>,
+    capacity: usize,
+}
 
-\subsection{Complexity Analysis}
-The quantum-inspired operations add minimal overhead:
+pub struct HierarchicalMemory {
+    levels: Vec<MemoryLevel>,
+    compressor: QuantumCompressor,
+    capacity: usize,
+}
+\end{verbatim}
 
-\begin{itemize}
-    \item State preparation: $O(d\log d)$
-    \item Entanglement: $O(d^2)$
-    \item Measurement: $O(d)$
-\end{itemize}
+\subsection{Quantum Compression}
 
-Total complexity remains $O(d^2)$, same as classical attention.
+The quantum compressor uses a combination of quantum gates and classical optimization:
 
-\subsection{Memory Requirements}
-Additional memory for quantum states:
+\begin{verbatim}
+struct QuantumCompressor {
+    weights: Array2<Complex64>,
+    ratio: f64,
+}
 
-\begin{itemize}
-    \item Complex amplitudes: $8d$ bytes per token
-    \item Density matrices: $8d^2$ bytes per layer
-    \item Phase variables: $4h$ bytes per head
-\end{itemize}
+impl QuantumCompressor {
+    fn compress(&self, data: ArrayView2<f64>) 
+        -> QuantumState {
+        let compressed = data.dot(&self.weights);
+        QuantumState::new(compressed, 
+            Array2::zeros(compressed.dim()))
+    }
+
+    fn decompress(&self, state: &QuantumState) 
+        -> Array2<f64> {
+        state.real.dot(&self.weights.t())
+    }
+}
+\end{verbatim}
+
+\subsection{Density Matrix Evolution}
+
+The density matrix evolution is implemented using efficient numerical integration:
+
+\begin{verbatim}
+pub struct DensityMatrix {
+    dim: usize,
+    rho: Array2<Complex64>,
+}
+
+impl DensityMatrix {
+    fn evolve(&mut self, hamiltonian: ArrayView2<Complex64>, 
+              dt: f64) {
+        let commutator = &self.rho.dot(&hamiltonian) - 
+                        &hamiltonian.dot(&self.rho);
+        self.rho -= Complex64::new(0.0, dt) * commutator;
+        
+        // Ensure Hermiticity
+        self.rho = 0.5 * (&self.rho + 
+                         &self.rho.t().map(|x| x.conj()));
+        
+        // Ensure trace preservation
+        let trace = (0..self.dim)
+            .map(|i| self.rho[[i, i]].re)
+            .sum::<f64>();
+        self.rho /= Complex64::new(trace, 0.0);
+    }
+
+    fn measure(&self) -> Array1<f64> {
+        (0..self.dim)
+            .map(|i| self.rho[[i, i]].re)
+            .collect()
+    }
+}
+\end{verbatim}
+
+\subsection{Performance Optimizations}
+
+Several key optimizations enable the high performance of HQM:
+
+\begin{enumerate}
+    \item SIMD parallelization using \texttt{ndarray} with Rayon
+    \item Cache-efficient memory layout for quantum states
+    \item Zero-copy operations using Rust's ownership system
+    \item Adaptive compression ratios based on importance scores
+    \item Lock-free concurrent access to memory levels
+\end{enumerate}
+
+\subsection{Benchmarks}
+
+Comprehensive benchmarks are implemented in \texttt{benchmarks/run\_benchmarks.py}:
+
+\begin{verbatim}
+def benchmark_memory(sizes, dim=1024):
+    results = {}
+    memory = HierarchicalMemory(capacity=max(sizes) * dim)
+    
+    for size in sizes:
+        # Generate random data
+        data = np.random.randn(size, dim)
+        importance = np.random.rand(size)
+        
+        # Benchmark storage
+        start = time.perf_counter()
+        for i in range(size):
+            memory.store(data[i:i+1], importance[i])
+        store_time = time.perf_counter() - start
+        
+        # Benchmark retrieval
+        times = []
+        for query in queries:
+            start = time.perf_counter()
+            memory.retrieve(query.reshape(1, -1))
+            times.append(time.perf_counter() - start)
+        
+        results[size] = {
+            'store_time': store_time,
+            'retrieval_time': np.mean(times)
+        }
+    
+    return results
+\end{verbatim}
 
 \section{Benchmarking Results}
 

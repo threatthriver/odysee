@@ -2,27 +2,58 @@
 
 This directory contains the LaTeX source files for the Odysee research paper and supplementary materials.
 
+## Prerequisites
+
+1. Install a LaTeX distribution:
+   - macOS: Install MacTeX from https://www.tug.org/mactex/
+   - Linux: `sudo apt-get install texlive-full`
+   - Windows: Install MiKTeX from https://miktex.org/
+
+2. Required LaTeX packages:
+   ```
+   amsmath
+   algorithm
+   algpseudocode
+   graphicx
+   url
+   hyperref
+   bm
+   tikz
+   ```
+
 ## Files
 
 - `odysee.tex`: Main paper describing the Odysee framework
 - `supplementary.tex`: Supplementary materials with detailed technical analysis
-- `figures/`: Directory containing paper figures (to be added)
+- `figures/`: Directory containing paper figures
+  - `architecture.tex`: System architecture diagram
+  - `routing.tex`: Routing weight computation
+  - `patches.tex`: Image patch processing
 
 ## Building the Paper
 
-To build the paper, you need a LaTeX distribution installed. We recommend using TeXLive or MiKTeX.
+1. Build the figures first:
+   ```bash
+   cd figures
+   pdflatex architecture.tex
+   pdflatex routing.tex
+   pdflatex patches.tex
+   cd ..
+   ```
 
-```bash
-# Build main paper
-pdflatex odysee.tex
-bibtex odysee
-pdflatex odysee.tex
-pdflatex odysee.tex
+2. Build the main paper:
+   ```bash
+   pdflatex odysee.tex
+   bibtex odysee
+   pdflatex odysee.tex
+   pdflatex odysee.tex
+   ```
 
-# Build supplementary materials
-pdflatex supplementary.tex
-pdflatex supplementary.tex
-```
+3. Build supplementary materials:
+   ```bash
+   pdflatex supplementary.tex
+   pdflatex supplementary.tex
+   ```
 
 ## Paper Structure
 
@@ -37,10 +68,28 @@ pdflatex supplementary.tex
 
 2. **Supplementary Materials (supplementary.tex)**
    - Detailed mathematical analysis
+   - Convergence proofs
+   - Implementation optimizations
+   - Advanced routing strategies
+   - Comprehensive benchmarking
+   - Resource utilization analysis
+
+## Key Mathematical Contributions
+
+1. **Multi-Head Routing**
+   - Novel attention-based routing mechanism
+   - Load balancing through auxiliary loss
+   - Convergence guarantees
+
+2. **Image Patch Processing**
+   - Hierarchical patch routing
+   - Cross-modal attention
+   - Memory-efficient implementation
+
+3. **Theoretical Analysis**
+   - Convergence rate bounds
    - Complexity analysis
-   - Implementation details
-   - Optimization techniques
-   - Comprehensive benchmarking results
+   - Stability guarantees
 
 ## Citation
 
