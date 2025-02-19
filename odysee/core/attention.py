@@ -1,16 +1,21 @@
 from typing import Optional, Tuple
 import numpy as np
+import torch
+import torch.nn.functional as F
 from .tensor import Tensor
 from .nn import Module, Parameter, Linear, softmax
+from ..cuda_ops import flash_attention
 
 class MultiHeadAttention(Module):
-    def __init__(self, hidden_size: int, num_heads: int, dropout: float = 0.1):
+    def __init__(self, hidden_size: int, num_heads: int, dropout: float = 0.1, use_flash: bool = True):
         super().__init__()
         assert hidden_size % num_heads == 0, "Hidden size must be divisible by number of heads"
         
         self.hidden_size = hidden_size
         self.num_heads = num_heads
         self.head_dim = hidden_size // num_heads
+        self.dropout = dropout
+        self.use_flash = use_flash and torch.cuda.is_available()
         
         # Linear layers for Q, K, V projections
         self.q_proj = Linear(hidden_size, hidden_size)
@@ -44,23 +49,35 @@ class MultiHeadAttention(Module):
         key = query if key is None else key
         value = query if value is None else value
         
-        # Project and split heads
-        q = self._split_heads(self.q_proj(query), batch_size)  # [B, H, Tq, D]
-        k = self._split_heads(self.k_proj(key), batch_size)    # [B, H, Tk, D]
-        v = self._split_heads(self.v_proj(value), batch_size)  # [B, H, Tv, D]
+        # Project inputs
+        q = self.q_proj(query)
+        k = self.k_proj(key)
+        v = self.v_proj(value)
         
-        # Scaled dot-product attention
-        scores = (q @ k.transpose(0, 1, 3, 2)) * self.scale  # [B, H, Tq, Tk]
-        
-        if mask is not None:
-            scores = scores.masked_fill(mask == 0, float('-inf'))
+        if self.use_flash:
+            # Use flash attention for faster computation
+            attn_output = flash_attention(
+                q, k, v,
+                num_heads=self.num_heads,
+                mask=mask
+            )
+        else:
+            # Split heads for regular attention
+            q = self._split_heads(q, batch_size)  # [B, H, Tq, D]
+            k = self._split_heads(k, batch_size)  # [B, H, Tk, D]
+            v = self._split_heads(v, batch_size)  # [B, H, Tv, D]
             
-        attn_weights = softmax(scores, dim=-1)
-        attn_output = attn_weights @ v  # [B, H, Tq, D]
+            # Scaled dot-product attention
+            scores = (q @ k.transpose(0, 1, 3, 2)) * self.scale  # [B, H, Tq, Tk]
+            
+            if mask is not None:
+                scores = scores.masked_fill(mask == 0, float('-inf'))
+                
+            attn_weights = softmax(scores, dim=-1)
+            attn_output = self._merge_heads(attn_weights @ v, batch_size)  # [B, Tq, D]
         
-        # Merge heads and project
-        output = self._merge_heads(attn_output, batch_size)
-        return self.out_proj(output)
+        # Project output
+        return self.out_proj(attn_output)
 
 class RelativePositionalEncoding(Module):
     def __init__(self, hidden_size: int, max_seq_len: int):
@@ -85,10 +102,10 @@ class RelativePositionalEncoding(Module):
 
 class LocalAttention(Module):
     """Attention that only attends to a local window around each position"""
-    def __init__(self, hidden_size: int, window_size: int, num_heads: int = 8):
+    def __init__(self, hidden_size: int, window_size: int, num_heads: int = 8, use_flash: bool = True):
         super().__init__()
         self.window_size = window_size
-        self.attention = MultiHeadAttention(hidden_size, num_heads)
+        self.attention = MultiHeadAttention(hidden_size, num_heads, use_flash=use_flash)
         
     def _create_local_mask(self, seq_len: int) -> Tensor:
         """Create mask for local attention window"""
@@ -98,8 +115,9 @@ class LocalAttention(Module):
             end = min(seq_len, i + self.window_size // 2 + 1)
             mask[i, start:end] = 1
         return Tensor(mask)
-    
+        
     def forward(self, x: Tensor) -> Tensor:
+        """Apply local attention to input"""
         seq_len = x.shape[1]
         mask = self._create_local_mask(seq_len)
         return self.attention(x, mask=mask)
