@@ -1,78 +1,103 @@
 import numpy as np
 import torch
-from typing import Optional, Tuple, List, Union
+from typing import Optional, Tuple, List, Union, Dict
 from odysee_rust import MultiModalRouter as RustRouter
 from .cuda_ops import quantum_phase_encoding, flash_attention, to_numpy
+from .core.attention import MultiHeadAttention
 
 __all__ = ['MultiModalRouter', 'DynamicRouter']
 
 class DynamicRouter:
-    """Advanced routing mechanism for handling both text and images with 4M context windows."""
+    """Advanced routing mechanism for handling multimodal inputs with cross-modal attention."""
     def __init__(self, config):
         self.config = config
         self.router = MultiModalRouter(config.routing_dim, config.num_heads)
+        self.cross_attention = MultiHeadAttention(
+            hidden_size=config.routing_dim,
+            num_heads=config.num_heads,
+            use_flash=True
+        )
         
-    def route(self, input_data: Union[np.ndarray, torch.Tensor], is_image: bool = False) -> Tuple[np.ndarray, np.ndarray]:
-        """Route input data to appropriate experts."""
-        # Convert input to PyTorch tensor if needed
-        if isinstance(input_data, np.ndarray):
-            input_data = torch.from_numpy(input_data)
+    def route(self, input_data: Union[np.ndarray, torch.Tensor], is_image: bool = False,
+              cross_modal_data: Optional[Dict[str, torch.Tensor]] = None) -> Tuple[np.ndarray, np.ndarray]:
+        """Route input data with optional cross-modal attention."""
+        try:
+            # Convert input to PyTorch tensor if needed
+            if isinstance(input_data, np.ndarray):
+                input_data = torch.from_numpy(input_data)
+                
+            # Apply quantum phase encoding
+            encoded_data = quantum_phase_encoding(input_data)
             
-        # Apply quantum phase encoding
-        encoded_data = quantum_phase_encoding(input_data)
-        
-        if is_image:
-            return self._route_image(encoded_data)
-        return self._route_text(encoded_data)
+            # Apply cross-modal attention if available
+            if cross_modal_data:
+                for modality, data in cross_modal_data.items():
+                    if data is not None:
+                        encoded_data = self.cross_attention(encoded_data, data, data)
+            
+            if is_image:
+                return self._route_image(encoded_data)
+            return self._route_text(encoded_data)
+            
+        except Exception as e:
+            raise RuntimeError(f"Routing failed: {str(e)}")
         
     def _route_text(self, text_data: torch.Tensor) -> Tuple[np.ndarray, np.ndarray]:
         """Route text data through the router."""
-        batch_size = text_data.shape[0]
-        seq_len = text_data.shape[1]
-        
-        # Generate attention patterns using flash attention
-        query = text_data
-        key = value = text_data
-        
-        attention_output = flash_attention(
-            query, key, value,
-            num_heads=self.config.num_heads
-        )
-        
-        # Convert to numpy for Rust router
-        flat_data = to_numpy(attention_output).reshape(-1, self.config.routing_dim)
-        
-        weights, indices = self.router.route_text(
-            flat_data.astype(np.float32),
-            batch_size,
-            seq_len
-        )
-        
-        return weights, indices
+        try:
+            batch_size = text_data.shape[0]
+            seq_len = text_data.shape[1]
+            
+            # Generate attention patterns using flash attention
+            query = text_data
+            key = value = text_data
+            
+            attention_output = flash_attention(
+                query, key, value,
+                num_heads=self.config.num_heads
+            )
+            
+            # Convert to numpy for Rust router
+            flat_data = to_numpy(attention_output).reshape(-1, self.config.routing_dim)
+            
+            weights, indices = self.router.route_text(
+                flat_data.astype(np.float32),
+                batch_size,
+                seq_len
+            )
+            
+            return weights, indices
+            
+        except Exception as e:
+            raise RuntimeError(f"Text routing failed: {str(e)}")
         
     def _route_image(self, image_data: torch.Tensor) -> Tuple[np.ndarray, np.ndarray]:
         """Route image data through the router."""
-        height, width = image_data.shape[:2]
-        
-        # Generate attention patterns using flash attention
-        query = image_data.view(1, height * width, -1)
-        key = value = query
-        
-        attention_output = flash_attention(
-            query, key, value,
-            num_heads=self.config.num_heads
-        )
-        
-        # Convert to numpy for Rust router
-        flat_data = to_numpy(attention_output).reshape(-1, self.config.routing_dim)
-        
-        weights, indices = self.router.route_text(
-            flat_data.astype(np.float32),
-            batch_size=1,
-            seq_len=height * width
-        )
-        
-        return weights, indices
+        try:
+            height, width = image_data.shape[:2]
+            
+            # Generate attention patterns using flash attention
+            query = image_data.view(1, height * width, -1)
+            key = value = query
+            
+            attention_output = flash_attention(
+                query, key, value,
+                num_heads=self.config.num_heads
+            )
+            
+            # Convert to numpy for Rust router
+            flat_data = to_numpy(attention_output).reshape(-1, self.config.routing_dim)
+            
+            weights, indices = self.router.route_text(
+                flat_data.astype(np.float32),
+                batch_size=1,
+                seq_len=height * width
+            )
+            
+            return weights, indices
+            
+        except Exception as e:
+            raise RuntimeError(f"Image routing failed: {str(e)}")
 
 
 class MultiModalRouter:
