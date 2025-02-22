@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from typing import List, Tuple, Optional, Union, Any
 from dataclasses import dataclass
 from .device import Device, get_default_device
@@ -10,17 +11,60 @@ class Device:
     type: str
 
 class Tensor:
-    def __init__(self, 
-                 data: Union[np.ndarray, List, float], 
-                 requires_grad: bool = False,
-                 device: Optional[Device] = None):
+    def __init__(self, data, requires_grad=False):
+        if isinstance(data, torch.Tensor):
+            self.data = data.detach().numpy()
+        else:
+            self.data = np.asarray(data)
+        self.requires_grad = requires_grad
+        self.grad = None
+        self._torch_tensor = None
+
+    @property
+    def shape(self):
+        return self.data.shape
+
+    def to_torch(self):
+        if self._torch_tensor is None:
+            self._torch_tensor = torch.from_numpy(self.data)
+            if self.requires_grad:
+                self._torch_tensor.requires_grad_(True)
+        return self._torch_tensor
+
+    def clone(self):
+        return Tensor(self.data.copy(), requires_grad=self.requires_grad)
+
+    def detach(self):
+        return Tensor(self.data.copy(), requires_grad=False)
+
+    def to(self, dtype):
+        if isinstance(dtype, torch.dtype):
+            return Tensor(self.data.astype(self._numpy_dtype(dtype)), requires_grad=self.requires_grad)
+        return self
+
+    def _numpy_dtype(self, torch_dtype):
+        dtype_map = {
+            torch.float32: np.float32,
+            torch.float64: np.float64,
+            torch.int32: np.int32,
+            torch.int64: np.int64
+        }
+        return dtype_map.get(torch_dtype, np.float32)
+
+    def __getitem__(self, idx):
+        return Tensor(self.data[idx], requires_grad=self.requires_grad)
+
+    def numpy(self):
+        return self.data
         self.device = device or get_default_device()
         if isinstance(data, np.ndarray):
             self.data = self.device.transfer_array(data)
+        elif isinstance(data, torch.Tensor):
+            self.data = self.device.transfer_array(data.detach().cpu().numpy())
         else:
             self.data = self.device.transfer_array(np.array(data))
         self.requires_grad = requires_grad
-        self.grad = None
+        self.grad = None if requires_grad else None
         self._backward_fn = lambda: None
         self._prev = set()
         

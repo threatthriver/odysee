@@ -14,7 +14,18 @@ logger = logging.getLogger(__name__)
 # Check platform and device availability
 IS_MACOS = platform.system() == 'Darwin'
 IS_ARM = platform.machine() == 'arm64'
-HAS_CUDA = torch.cuda.is_available() and os.environ.get('CUDA_HOME') is not None
+# Check CUDA environment and version
+CUDA_HOME = os.environ.get('CUDA_HOME') or os.environ.get('CUDA_PATH')
+HAS_CUDA = torch.cuda.is_available() and CUDA_HOME is not None
+
+# Get CUDA version if available
+CUDA_VERSION = None
+if HAS_CUDA:
+    try:
+        CUDA_VERSION = torch.version.cuda
+        logger.info(f"CUDA version {CUDA_VERSION} detected")
+    except:
+        logger.warning("Could not detect CUDA version")
 HAS_MPS = IS_MACOS and IS_ARM and torch.backends.mps.is_available()
 
 def get_device():

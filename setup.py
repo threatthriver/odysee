@@ -10,8 +10,18 @@ if sys.version_info < (3, 8):
 # Platform specific settings
 IS_MACOS = platform.system() == 'Darwin'
 IS_ARM = platform.machine() == 'arm64'
-CUDA_HOME = os.environ.get('CUDA_HOME')
-HAS_CUDA = CUDA_HOME is not None
+# Check CUDA availability
+CUDA_HOME = os.environ.get('CUDA_HOME') or os.environ.get('CUDA_PATH')
+HAS_CUDA = CUDA_HOME is not None and torch.cuda.is_available()
+
+# Detect CUDA version
+CUDA_VERSION = None
+if HAS_CUDA:
+    try:
+        import torch.utils.cpp_extension
+        CUDA_VERSION = torch.utils.cpp_extension.CUDA_HOME
+    except:
+        pass
 
 def read_requirements(filename):
     with open(filename) as f:
