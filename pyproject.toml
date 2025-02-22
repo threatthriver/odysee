@@ -79,7 +79,7 @@ documentation = "https://odysee.readthedocs.io"
 changelog = "https://github.com/intellijmind/odysee/blob/main/CHANGELOG.md"
 
 [tool.maturin]
-python-source = "python"
+python-source = "odysee"
 features = ["pyo3/extension-module"]
 profile = "release"
 

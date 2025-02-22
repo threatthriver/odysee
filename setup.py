@@ -3,6 +3,11 @@ import os
 import sys
 import platform
 
+try:
+    import torch
+except ImportError:
+    torch = None
+
 # Check Python version
 if sys.version_info < (3, 8):
     sys.exit('Odysee requires Python 3.8 or later')
@@ -10,18 +15,20 @@ if sys.version_info < (3, 8):
 # Platform specific settings
 IS_MACOS = platform.system() == 'Darwin'
 IS_ARM = platform.machine() == 'arm64'
+
 # Check CUDA availability
 CUDA_HOME = os.environ.get('CUDA_HOME') or os.environ.get('CUDA_PATH')
-HAS_CUDA = CUDA_HOME is not None and torch.cuda.is_available()
-
-# Detect CUDA version
+HAS_CUDA = False
 CUDA_VERSION = None
-if HAS_CUDA:
-    try:
-        import torch.utils.cpp_extension
-        CUDA_VERSION = torch.utils.cpp_extension.CUDA_HOME
-    except:
-        pass
+
+if torch is not None:
+    HAS_CUDA = CUDA_HOME is not None and torch.cuda.is_available()
+    if HAS_CUDA:
+        try:
+            import torch.utils.cpp_extension
+            CUDA_VERSION = torch.utils.cpp_extension.CUDA_HOME
+        except:
+            pass
 
 def read_requirements(filename):
     with open(filename) as f:
@@ -34,7 +41,7 @@ with open('README.md', encoding='utf-8') as f:
 # Base dependencies
 install_requires = [
     'numpy>=1.20.0',
-    'torch>=1.9.0',
+    'torch>=2.0.0',  # Updated to latest stable version
     'maturin>=1.0.0',
     'pillow>=8.0.0',
     'tqdm>=4.62.0',
@@ -60,6 +67,15 @@ if IS_MACOS:
             'torch>=1.9.0',
             'mkl>=2021',  # Intel MKL optimization
         ])
+else:
+    # Linux (Ubuntu) optimizations
+    install_requires.extend([
+        'torch>=2.0.0',
+        'mkl>=2021',  # Intel MKL optimization
+        'opencv-python>=4.8.0',  # OpenCV support
+        'portaudio>=19.0',  # Audio processing
+        'sounddevice>=0.4.0'  # Audio I/O
+    ])
 
 # CUDA support
 if HAS_CUDA:
