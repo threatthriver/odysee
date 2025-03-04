@@ -32,16 +32,14 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools wheel
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
+        pip install -r requirements.txt -r requirements-dev.txt
         pip install pytest pytest-cov pytest-benchmark
+        pip install -e . --no-deps
         pip install -e .
     
-    - name: Build Rust extensions
+    - name: Build package
       run: |
-        cd rust
-        cargo build --release
-        cd ..
+        maturin develop --release
     
     - name: Run tests
       run: |

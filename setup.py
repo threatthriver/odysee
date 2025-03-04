@@ -26,18 +26,35 @@ HAS_CPU_FEATURES = False
 HAS_ROCM = False  # For AMD GPUs
 
 if torch is not None:
-    # CUDA detection with comprehensive version check
+    # CUDA detection with comprehensive version check and auto-installation support
     try:
-        HAS_CUDA = CUDA_HOME is not None and torch.cuda.is_available()
+        # Check if CUDA is available through PyTorch
+        HAS_CUDA = torch.cuda.is_available()
+        
+        # If CUDA_HOME is not set but CUDA is available through PyTorch, try to locate it
+        if HAS_CUDA and not CUDA_HOME:
+            import subprocess
+            try:
+                nvcc_path = subprocess.check_output(['which', 'nvcc']).decode().strip()
+                CUDA_HOME = os.path.dirname(os.path.dirname(nvcc_path))
+                os.environ['CUDA_HOME'] = CUDA_HOME
+            except subprocess.CalledProcessError:
+                pass
+        
         if HAS_CUDA:
             CUDA_VERSION = torch.version.cuda
             MIN_CUDA_VERSION = '11.0'
             RECOMMENDED_CUDA_VERSION = '11.8'
+            
+            # Version compatibility check
             if CUDA_VERSION < MIN_CUDA_VERSION:
                 print(f'Error: CUDA {CUDA_VERSION} is not supported. Minimum required version is {MIN_CUDA_VERSION}')
                 HAS_CUDA = False
             elif CUDA_VERSION < RECOMMENDED_CUDA_VERSION:
                 print(f'Warning: CUDA {CUDA_VERSION} detected. Version {RECOMMENDED_CUDA_VERSION} or higher is recommended for optimal performance')
+                
+            # Print CUDA information
+            print(f'CUDA {CUDA_VERSION} detected at {CUDA_HOME}')
     except Exception as e:
         print(f'CUDA detection error: {e}')
 
