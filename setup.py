@@ -115,29 +115,24 @@ install_requires = [
 
 # Platform and hardware specific dependencies
 if IS_MACOS:
+    install_requires.extend([
+        'torch>=2.1.0',  # Latest PyTorch
+        'py-cpuinfo>=9.0.0',
+        'accelerate>=0.22.0',  # Hardware acceleration
+    ])
     if IS_ARM:
-        # Enhanced Apple Silicon optimizations
+        # Basic Apple Silicon optimizations
         install_requires.extend([
-            'torch>=2.1.0',  # Latest PyTorch with improved MPS support
-            'accelerate>=0.22.0',  # Updated hardware acceleration
-            'py-cpuinfo>=9.0.0',
             'tensorflow-macos>=2.13.0;python_version>="3.8"',
-            'coremltools>=7.0',  # Core ML integration
-            'onnxruntime>=1.15.0',  # ONNX Runtime with Metal support
         ])
         if HAS_MPS:
             install_requires.extend([
-                'metal-performance-shaders',
-                'torch-mps-nightly',  # Latest MPS optimizations
+                'torch-mps-nightly',  # MPS optimizations
             ])
     else:
-        # Updated Intel Mac optimizations
+        # Basic Intel Mac optimizations
         install_requires.extend([
-            'torch>=2.1.0',
-            'mkl>=2023.1.0',  # Latest Intel MKL
-            'py-cpuinfo>=9.0.0',
-            'intel-openmp>=2023.1.0',
-            'oneDNN>=3.1.1',  # Deep Neural Network Library
+            'mkl>=2023.1.0',  # Intel MKL
         ])
 elif IS_LINUX:
     # Enhanced Linux optimizations
@@ -160,18 +155,17 @@ elif IS_LINUX:
             'oneDNN>=3.1.1',
         ])
 
-# Enhanced CUDA support with version-specific packages
+# Basic CUDA support
 if HAS_CUDA:
-    cuda_version = torch.version.cuda.split('.')
-    major, minor = int(cuda_version[0]), int(cuda_version[1])
-    install_requires.extend([
-        f'cupy-cuda{major}{minor}>=12.2.0',
-        'torch>=2.1.0',
-        'nvidia-ml-py>=12.535.108',
-        'cutorch>=1.1.0;python_version>="3.8"',
-        'torch-tensorrt>=1.4.0',  # TensorRT integration
-        'flash-attn>=2.0.0',  # Flash Attention support
-    ])
+    try:
+        cuda_version = torch.version.cuda.split('.')
+        major, minor = int(cuda_version[0]), int(cuda_version[1])
+        install_requires.extend([
+            'torch>=2.1.0',
+            'nvidia-ml-py>=12.535.108',
+        ])
+    except Exception as e:
+        print(f'Warning: Error configuring CUDA dependencies: {e}')
 
 # ROCm support for AMD GPUs
 if HAS_ROCM:
@@ -189,16 +183,10 @@ if HAS_CPU_FEATURES:
         'quantum-optimizer>=1.0.0'
     ])
 
-# Advanced neural architecture search and distributed training
+# Basic training dependencies
 install_requires.extend([
     'optuna>=3.4.0',  # Hyperparameter optimization
-    'ray[tune]>=2.7.0',  # Distributed training
-    'horovod>=0.28.0',  # Distributed deep learning
-    'dask>=2023.9.0',  # Parallel computing
-    'neural-compressor>=2.0',  # Model compression
-    'transformers>=4.35.0',  # Advanced transformer architectures
-    'deepspeed>=0.12.0',  # Model parallelism
-    'fairscale>=0.4.13'  # Large-scale training
+    'transformers>=4.35.0',  # Transformer architectures
 ])
 
 # Package metadata
