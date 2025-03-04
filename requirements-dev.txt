@@ -1,33 +1,33 @@
 # Testing
-pytest~=7.4.0
-pytest-cov~=4.1.0
-pytest-benchmark~=4.0.0
-psutil~=5.9.0  # For memory tests
+pytest
+pytest-cov
+pytest-benchmark
+psutil  # For memory tests
 
 # Documentation
-sphinx>=7.0.0
-sphinx-rtd-theme>=1.0.0
-furo>=2022.4.7
-myst-parser>=0.18.0
-sphinx-autodoc-typehints>=1.18.3
+sphinx
+sphinx-rtd-theme
+furo
+myst-parser
+sphinx-autodoc-typehints
 
 # Code Quality
-black~=23.7.0
-isort~=5.12.0
-flake8~=6.1.0
-mypy~=1.5.0
-typing-extensions~=4.7.0  # For Python 3.8 compatibility
+black
+isort
+flake8
+mypy
+typing-extensions  # For Python 3.8 compatibility
 
 # Development
-ipython>=8.3.0
-jupyter>=1.0.0
-pre-commit>=3.0.0
-maturin>=1.0.0
-tqdm>=4.65.0
-matplotlib>=3.7.0
-numpy>=1.24.0
-ipykernel>=6.0.0  # For notebook development
+ipython
+jupyter
+pre-commit
+maturin
+tqdm
+matplotlib
+numpy
+ipykernel  # For notebook development
 
 # Build
-build>=0.8.0
-twine>=4.0.1
+build
+twine

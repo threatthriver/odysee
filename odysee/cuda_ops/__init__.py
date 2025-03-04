@@ -31,9 +31,9 @@ HAS_MPS = IS_MACOS and IS_ARM and torch.backends.mps.is_available()
 def get_device():
     """Get the best available device for computation"""
     if HAS_CUDA:
-        return torch.device('cuda')
+        return torch.device('cuda:0')
     elif HAS_MPS:
-        return torch.device('mps')
+        return torch.device('mps:0')
     else:
         return torch.device('cpu')
 
@@ -41,7 +41,10 @@ def to_device(tensor):
     """Move tensor to the best available device"""
     if not isinstance(tensor, torch.Tensor):
         tensor = torch.tensor(tensor)
-    return tensor.to(get_device())
+    device = get_device()
+    if tensor.device.type != device.type:
+        return tensor.to(device)
+    return tensor
 
 def to_numpy(tensor):
     """Convert tensor to numpy array, handling different devices properly"""
@@ -53,20 +56,29 @@ def to_numpy(tensor):
 
 class QuantumPhaseEncoder(torch.nn.Module):
     """Quantum phase encoding implementation"""
-    def __init__(self, hidden_dim):
+    def __init__(self, hidden_dim, num_qubits=8):
         super().__init__()
         self.hidden_dim = hidden_dim
-        self.phase_embedding = torch.nn.Parameter(torch.randn(hidden_dim) / hidden_dim ** 0.5)
+        self.num_qubits = num_qubits
+        self.phase_embedding = torch.nn.Parameter(torch.randn(hidden_dim, num_qubits) / math.sqrt(hidden_dim * num_qubits))
+        self.quantum_gates = torch.nn.ModuleList([
+            torch.nn.Linear(num_qubits, num_qubits) for _ in range(4)
+        ])
         
     def forward(self, x):
-        # Apply quantum phase encoding
-        phase = torch.sin(x * self.phase_embedding[None, None, :])
-        amplitude = torch.cos(x * self.phase_embedding[None, None, :])
-        return phase * amplitude
+        # Apply quantum circuit simulation
+        batch_size, seq_len, _ = x.shape
+        quantum_state = torch.matmul(x, self.phase_embedding)  # Shape: [batch, seq_len, num_qubits]
+        
+        # Apply quantum gates
+        for gate in self.quantum_gates:
+            quantum_state = torch.sigmoid(gate(quantum_state))
+        
+        # Measure quantum state
+        return quantum_state  # Shape: [batch, seq_len, num_qubits]
 
 class FlashAttention(torch.nn.Module):
-    """Optimized attention implementation with improved memory efficiency"""
-    def __init__(self, hidden_dim, num_heads, dropout=0.1):
+    def __init__(self, hidden_dim, num_heads, dropout=0.1, window_size=None):
         super().__init__()
         assert hidden_dim % num_heads == 0, "Hidden dimension must be divisible by number of heads"
         
@@ -75,20 +87,27 @@ class FlashAttention(torch.nn.Module):
         self.head_dim = hidden_dim // num_heads
         self.dropout = dropout
         self.scale = self.head_dim ** -0.5
+        self.window_size = window_size
         
-        # Initialize weights with proper scaling
-        std = self.head_dim ** -0.5
+        # Initialize with advanced scaling
+        std = 0.02  # Improved initialization for stability
         self.q_proj = torch.nn.Linear(hidden_dim, hidden_dim)
         self.k_proj = torch.nn.Linear(hidden_dim, hidden_dim)
         self.v_proj = torch.nn.Linear(hidden_dim, hidden_dim)
         self.out_proj = torch.nn.Linear(hidden_dim, hidden_dim)
         
-        # Initialize parameters with proper scaling
+        # Initialize with advanced techniques
         for proj in [self.q_proj, self.k_proj, self.v_proj, self.out_proj]:
             torch.nn.init.normal_(proj.weight, mean=0.0, std=std)
             if proj.bias is not None:
                 torch.nn.init.zeros_(proj.bias)
-        
+                
+        # Add relative positional embeddings
+        if window_size:
+            self.rel_pos_embedding = torch.nn.Parameter(
+                torch.randn(2 * window_size - 1, self.head_dim) / self.head_dim ** 0.5
+            )
+
     def forward(self, query, key, value, mask=None):
         batch_size = query.size(0)
         

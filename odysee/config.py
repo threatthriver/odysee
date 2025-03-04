@@ -2,6 +2,25 @@ from dataclasses import dataclass
 from typing import Optional
 
 @dataclass
+class RoutingConfig:
+    """Configuration for dynamic routing"""
+    routing_dim: int
+    num_heads: int
+    max_context_length: int
+    use_flash_attention: bool = True
+    dropout: float = 0.1
+    attention_dropout: float = 0.1
+    hidden_dropout: float = 0.1
+    layer_norm_eps: float = 1e-12
+    initializer_range: float = 0.02
+    hidden_act: str = "gelu"
+    intermediate_size: Optional[int] = None
+    
+    def __post_init__(self):
+        if self.intermediate_size is None:
+            self.intermediate_size = 4 * self.routing_dim
+
+@dataclass
 class OdyseeConfig:
     """Configuration for Odysee model"""
     

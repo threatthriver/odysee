@@ -1,17 +1,17 @@
-numpy>=1.20.0
-torch>=1.9.0
-maturin>=1.0.0
-pillow>=8.0.0
-tqdm>=4.62.0
-pytest>=6.0.0
-pytest-cov>=2.0.0
-einops>=0.6.0
-scikit-learn>=1.0.0
-wandb>=0.15.0
-rich>=13.0.0
+numpy
+torch
+maturin
+pillow
+tqdm
+pytest
+pytest-cov
+einops
+scikit-learn
+wandb
+rich
 
 # Optional dependencies
-cupy-cuda11x>=12.0.0; platform_system!="Windows"
-hypothesis>=6.0.0
-pandas>=2.0.0
-matplotlib>=3.0.0
+cupy-cuda; platform_system!="Windows"
+hypothesis
+pandas
+matplotlib
